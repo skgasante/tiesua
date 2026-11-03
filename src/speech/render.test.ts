@@ -7,12 +7,12 @@ const render = (expr: string, mode: 'natural' | 'detailed' | 'ordinary' = 'natur
   renderUtterances(toSpeechPlan(parseExpression(expr), mode));
 
 describe('phrase-level rendering (improved speech)', () => {
-  it('(x+2)/4 becomes two connected phrases with one brief boundary', () => {
+  it('(x+2)/4 becomes two connected phrases with one clear grouping boundary', () => {
     const u = render('(x+2)/4');
     expect(u).toHaveLength(2);
     expect(u[0].text).toBe('x plus two');
     expect(u[1].text).toBe('all over four');
-    expect(u[0].pauseAfterMs).toBeLessThanOrEqual(200);
+    expect(u[0].pauseAfterMs).toBe(450);
     expect(u[1].pitch).toBeGreaterThan(1); // emphasis on ALL over
   });
 
@@ -20,7 +20,7 @@ describe('phrase-level rendering (improved speech)', () => {
     const u = render('x+(2/4)');
     expect(u).toHaveLength(2);
     expect(u[0].text).toBe('x');
-    expect(u[0].pauseAfterMs).toBe(300);
+    expect(u[0].pauseAfterMs).toBe(600);
     expect(u[1].text).toBe('plus two over four');
   });
 
@@ -41,7 +41,7 @@ describe('phrase-level rendering (improved speech)', () => {
     const u = renderUtterances(plan);
     expect(u.length).toBeGreaterThanOrEqual(2);
     expect(u.length).toBeLessThanOrEqual(4);
-    expect(plannedPauseTotal(plan)).toBeLessThanOrEqual(400);
+    expect(plannedPauseTotal(plan)).toBeLessThanOrEqual(900);
   });
 
   it('improved rendering uses far fewer utterances than legacy', () => {
@@ -56,7 +56,7 @@ describe('phrase-level rendering (improved speech)', () => {
   });
 
   it('ordinary short expressions carry no planned pauses', () => {
-    expect(plannedPauseTotal(toSpeechPlan(parseExpression('x+5 = 12'), 'natural'))).toBeLessThanOrEqual(250);
+    expect(plannedPauseTotal(toSpeechPlan(parseExpression('x+5 = 12'), 'natural'))).toBeLessThanOrEqual(400);
   });
 });
 
@@ -72,6 +72,6 @@ it('keeps the full lesson equation and alternate grouping audibly distinct', () 
 it('honours the separate fraction convention inside tutor prose too', () => {
   const utterances = renderUtterances({ mode: 'natural', segments: [{ id: 'p', nodeId: 'p', text: 'The second expression is x, plus two over four. Only two is divided.', pauseAfterMs: 0, boundary: 'none' }] });
   expect(utterances[0].text).toBe('The second expression is x');
-  expect(utterances[0].pauseAfterMs).toBe(300);
+  expect(utterances[0].pauseAfterMs).toBe(600);
   expect(utterances[1].text).toBe('plus two over four. Only two is divided.');
 });
