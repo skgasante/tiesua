@@ -1,0 +1,33 @@
+# TieSua isolated deployment on the owner's VPS. This file changes
+# nothing by itself: `docker compose up -d` is an owner action after
+# approving docs/DEPLOYMENT.md. It does not touch any other service:
+# dedicated project name, container names, network and port.
+name: tiesua
+
+services:
+  backend:
+    build: .
+    container_name: tiesua-backend
+    restart: unless-stopped
+    env_file: .env.production
+    ports:
+      # Bind to localhost only; the reverse proxy (Cloudflare Tunnel
+      # or the VPS proxy) is the public entry point.
+      - "127.0.0.1:18000:8000"
+    networks: [tiesua-net]
+
+  web:
+    image: nginx:alpine
+    container_name: tiesua-web
+    restart: unless-stopped
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:18080:80"
+    depends_on: [backend]
+    networks: [tiesua-net]
+
+networks:
+  tiesua-net:
+    name: tiesua-net

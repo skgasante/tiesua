@@ -90,26 +90,27 @@ class Parser {
   }
 
   private parseMulDiv(): MathNode {
-    let left = this.parsePower();
+    let left = this.parseUnary();
     for (;;) {
       if (this.atOp('*') || this.atOp('/')) {
         const op = (this.next() as { value: BinaryOp }).value;
-        const right = this.parsePower();
+        const right = this.parseUnary();
         left = { kind: 'binary', id: nid(), op, left, right };
       } else if (this.startsAtom(this.peek())) {
         // Implicit multiplication: 2x, 3(x+2), (x+1)(x+2)
-        const right = this.parsePower();
+        const right = this.parseUnary();
         left = { kind: 'binary', id: nid(), op: '*', left, right, implicit: true };
       } else break;
     }
     return left;
   }
 
+  // Powers bind tighter than a leading minus: -x^2 means -(x^2).
   private parsePower(): MathNode {
-    const base = this.parseUnary();
+    const base = this.parseAtom();
     if (this.atOp('^')) {
       this.next();
-      const exp = this.parsePower();
+      const exp = this.parseUnary();
       return { kind: 'binary', id: nid(), op: '^', left: base, right: exp };
     }
     return base;
@@ -118,7 +119,7 @@ class Parser {
   private parseUnary(): MathNode {
     if (this.atOp('-')) { this.next(); return { kind: 'unary', id: nid(), op: '-', expr: this.parseUnary() }; }
     if (this.atOp('+')) { this.next(); return this.parseUnary(); }
-    return this.parseAtom();
+    return this.parsePower();
   }
 
   private parseAtom(): MathNode {

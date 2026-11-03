@@ -61,8 +61,16 @@ describe('Speech Plan integrity', () => {
     collect(ast);
     expect(plan.segments.length).toBeGreaterThan(1);
     for (const s of plan.segments) { expect(ids.has(s.nodeId)).toBe(true); expect(s.text.length).toBeGreaterThan(0); }
-    // The fraction boundary carries the grouping pause.
-    expect(plan.segments.some((s) => s.boundary === 'group' && s.pauseAfterMs >= 300)).toBe(true);
+    // Natural mode: ONE brief fraction boundary (120–250 ms), not a
+    // pause at every operator. Detailed mode groups more strongly.
+    const natural = plan.segments.filter((s) => s.boundary === 'group');
+    expect(natural).toHaveLength(1);
+    expect(natural[0].pauseAfterMs).toBeGreaterThanOrEqual(120);
+    expect(natural[0].pauseAfterMs).toBeLessThanOrEqual(250);
+    expect(plan.segments.filter((s) => s.boundary === 'phrase').every((s) => s.pauseAfterMs === 0)).toBe(true);
+    const detailed = toSpeechPlan(ast, 'detailed');
+    expect(detailed.segments.reduce((a, s) => a + s.pauseAfterMs, 0))
+      .toBeGreaterThan(plan.segments.reduce((a, s) => a + s.pauseAfterMs, 0));
   });
   it('Natural equation reading includes equals with an equation pause', () => {
     const plan = toSpeechPlan(parseExpression('(x+2)/4 = 3'), 'natural');

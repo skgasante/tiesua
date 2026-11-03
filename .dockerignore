@@ -1,0 +1,11 @@
+.git
+.venv
+node_modules
+dist
+__pycache__
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.md
+docs

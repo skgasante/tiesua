@@ -5,3 +5,18 @@ dist/
 !.env.example
 *.local
 .DS_Store
+tsconfig.tsbuildinfo
+
+.venv/
+__pycache__/
+!.env.production.example
+
+# Local verification output, kept out of source commits.
+*-test-results.txt
+build-results.txt
+
+# Defense in depth: encrypted local credential files must never be committed.
+*.dpapi
+
+# Vercel account links and downloaded environments stay local.
+.vercel/

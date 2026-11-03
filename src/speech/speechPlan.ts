@@ -31,6 +31,8 @@ export interface SpeechSegment {
   text: string;
   pauseAfterMs: number;
   boundary: Boundary;
+  /** Renderer hint: give this phrase slight emphasis (e.g. ALL over). */
+  emphasis?: boolean;
 }
 
 export interface SpeechPlan {
@@ -38,7 +40,20 @@ export interface SpeechPlan {
   segments: SpeechSegment[];
 }
 
-export const PAUSES = { phrase: 200, group: 350, equation: 500 } as const;
+/** Intended pauses by mode. Natural mode starts from MINIMAL
+ * boundaries: operators inside a phrase get no silence at all, a
+ * grouped fraction gets one brief boundary, and equations get a
+ * short beat. Detailed mode keeps stronger explicit grouping.
+ * The renderer turns these intentions into phrase-level speech —
+ * fixed pauses alone never guarantee understandable grouping. */
+export const PAUSES: Record<SpeechMode, Record<'phrase' | 'group' | 'equation', number>> = {
+  ordinary: { phrase: 0, group: 0, equation: 0 },
+  natural: { phrase: 0, group: 180, equation: 220 },
+  detailed: { phrase: 140, group: 400, equation: 500 },
+};
+export function pauseFor(mode: SpeechMode, kind: 'phrase' | 'group' | 'equation'): number {
+  return PAUSES[mode][kind];
+}
 
 const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
 const TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
@@ -57,8 +72,8 @@ export function numberToWords(raw: string): string {
 }
 
 let segCounter = 0;
-function seg(nodeId: string, text: string, pauseAfterMs = 0, boundary: Boundary = 'none'): SpeechSegment {
-  return { id: `s${++segCounter}`, nodeId, text, pauseAfterMs, boundary };
+function seg(nodeId: string, text: string, pauseAfterMs = 0, boundary: Boundary = 'none', emphasis = false): SpeechSegment {
+  return { id: `s${++segCounter}`, nodeId, text, pauseAfterMs, boundary, ...(emphasis ? { emphasis: true } : {}) };
 }
 function withPause(segs: SpeechSegment[], ms: number, boundary: Boundary): SpeechSegment[] {
   if (segs.length === 0) return segs;
@@ -96,12 +111,12 @@ function speak(node: MathNode, mode: SpeechMode): SpeechSegment[] {
     case 'equation': {
       if (mode === 'detailed') {
         return [
-          seg(node.id, 'left side'), ...withPause(speak(node.left, mode), PAUSES.equation, 'equation'),
+          seg(node.id, 'left side'), ...withPause(speak(node.left, mode), pauseFor(mode, 'equation'), 'equation'),
           seg(node.id, 'equals'),
           seg(node.id, 'right side'), ...speak(node.right, mode),
         ];
       }
-      const pause = mode === 'ordinary' ? 0 : PAUSES.equation;
+      const pause = mode === 'ordinary' ? 0 : pauseFor(mode, 'equation');
       return [...withPause(speak(node.left, mode), pause, 'equation'), seg(node.id, 'equals'), ...speak(node.right, mode)];
     }
     case 'binary': return speakBinary(node, mode);
@@ -122,18 +137,22 @@ function speakBinary(node: Extract<MathNode, { kind: 'binary' }>, mode: SpeechMo
     if (mode === 'detailed') {
       return [
         seg(node.id, 'the fraction'), seg(node.id, 'numerator'),
-        ...withPause(speak(unwrap(left), mode), PAUSES.group, 'group'),
+        ...withPause(speak(unwrap(left), mode), pauseFor(mode, 'group'), 'group'),
         seg(node.id, 'over denominator'),
-        ...withPause(speak(unwrap(right), mode), PAUSES.group, 'group'),
+        ...withPause(speak(unwrap(right), mode), pauseFor(mode, 'group'), 'group'),
         seg(node.id, 'end of fraction'),
       ];
     }
     // Natural: a grouped or compound top means "all over"; a simple
-    // top keeps the short "over". (x+2)/4 vs 2/4.
-    const top = speak(unwrap(left), mode);
-    const bottom = speak(unwrap(right), mode);
+    // top keeps the short "over". (x+2)/4 vs 2/4. Inside the top and
+    // bottom, operators are CONNECTED (no phrase boundary): the
+    // numerator must sound like one phrase, "x plus two".
+    const connected = (segs: SpeechSegment[]) => segs.map((s) =>
+      s.boundary === 'phrase' ? { ...s, boundary: 'none' as Boundary, pauseAfterMs: 0 } : s);
+    const top = connected(speak(unwrap(left), mode));
+    const bottom = connected(speak(unwrap(right), mode));
     if (isComplex(left)) {
-      return [...withPause(top, PAUSES.group, 'group'), seg(node.id, 'all over'), ...bottom];
+      return [...withPause(top, pauseFor(mode, 'group'), 'group'), seg(node.id, 'all over', 0, 'none', true), ...bottom];
     }
     return [...top, seg(node.id, 'over'), ...bottom];
   }
@@ -158,22 +177,26 @@ function speakBinary(node: Extract<MathNode, { kind: 'binary' }>, mode: SpeechMo
     const r = unwrap(right);
     if ((right.kind === 'group' && r.kind === 'unary') || right.kind === 'unary') {
       const neg = r.kind === 'unary' ? r : null;
-      if (neg) return [...withPause(speak(left, mode), PAUSES.phrase, 'phrase'), seg(node.id, 'minus'), ...speak(neg, mode)];
+      if (neg) return [...withPause(speak(left, mode), pauseFor(mode, 'phrase'), 'phrase'), seg(node.id, 'minus'), ...speak(neg, mode)];
     }
   }
   if (op === '-' && mode === 'detailed') {
-    const pause = PAUSES.phrase;
+    const pause = pauseFor(mode, 'phrase');
     return [...withPause(speak(left, mode), pause, 'phrase'), seg(node.id, 'minus'), ...speak(right, mode)];
   }
   const word = op === '+' ? 'plus' : 'minus';
-  const pause = mode === 'ordinary' ? 0 : PAUSES.phrase;
+  const pause = mode === 'ordinary' ? 0 : pauseFor(mode, 'phrase');
   // Natural mode: brackets around a fraction as a term are not spoken —
   // "two over four" already carries its own grouping (x+(2/4)).
   const speakTerm = (n: MathNode): SpeechSegment[] =>
     mode === 'natural' && n.kind === 'group' && unwrap(n).kind === 'binary' && (unwrap(n) as { op?: string }).op === '/'
       ? speak(unwrap(n), mode)
       : speak(n, mode);
-  return [...withPause(speakTerm(left), pause, 'phrase'), seg(node.id, word), ...speakTerm(right)];
+  // A fraction used as a separate added/subtracted term needs a real audible
+  // boundary, not a comma whose timing depends entirely on the voice.
+  const term = unwrap(right);
+  const separateFraction = mode === 'natural' && term.kind === 'binary' && term.op === '/';
+  return [...withPause(speakTerm(left), separateFraction ? 300 : pause, separateFraction ? 'group' : 'phrase'), seg(node.id, word), ...speakTerm(right)];
 }
 
 export function toSpeechPlan(node: MathNode, mode: SpeechMode): SpeechPlan {
