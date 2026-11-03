@@ -72,4 +72,35 @@ describe('learner-selected grouping pauses', () => {
     expect(spoken).toHaveLength(1);
     provider.stop();
   });
+
+  it.each([0.5, 1, 2])('waits the selected %sx pause before the second native utterance', (selection) => {
+    vi.useFakeTimers();
+    const spoken: any[] = [];
+    vi.stubGlobal('SpeechSynthesisUtterance', class {
+      constructor(public text: string) {}
+    });
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        cancel: vi.fn(),
+        getVoices: () => [],
+        speak: (utterance: any) => { spoken.push(utterance); utterance.onstart?.(); },
+      },
+    });
+    const plan = toSpeechPlan(parseExpression('x+(2/4)'), 'natural');
+    const expected = applyPauseScale(renderUtterances(plan), selection)[0].pauseAfterMs;
+    expect(expected).toBeGreaterThan(1);
+    const provider = new BrowserSpeechProvider();
+    provider.speak(plan, { pauseScale: selection });
+    vi.advanceTimersByTime(60);
+    expect(spoken).toHaveLength(1);
+    spoken[0].onend();
+    vi.advanceTimersByTime(expected - 1);
+    expect(spoken).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(spoken).toHaveLength(2);
+    provider.stop();
+  });
+
+
 });
