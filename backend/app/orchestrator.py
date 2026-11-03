@@ -270,7 +270,10 @@ def _validate_plan(raw: object, verified: object = None) -> dict | None:
     assessment = raw.get("stepAssessment")
     if assessment not in ("correct", "incorrect", "partial", "unanswered"):
         assessment = None
-    return {"stepAssessment": assessment, "interpretedAnswer": interpreted, "actions": base["actions"], "teachingMove": move,
+    purpose = raw.get("learnerPurpose")
+    if purpose not in ("stop", "request", "answer", "question", "unclear"):
+        purpose = None
+    return {"learnerPurpose": purpose, "stepAssessment": assessment, "interpretedAnswer": interpreted, "actions": base["actions"], "teachingMove": move,
             "reply": reply, "confidence": base["confidence"],
             "continuation": continuation,
             "clarification": base["clarification"]}

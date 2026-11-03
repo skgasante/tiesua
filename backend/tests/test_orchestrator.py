@@ -5,6 +5,19 @@ import pytest
 from backend.app.orchestrator import TEACHING_MOVES, _guard_tutorial_controls, _validate_plan, orchestrate_request
 
 
+@pytest.mark.parametrize("purpose", ["request", "question", "answer", "unclear", "stop"])
+def test_plan_preserves_classified_learner_purpose(purpose):
+    result = _validate_plan({"actions": [], "confidence": 0.95,
+                             "teachingMove": "none", "learnerPurpose": purpose})
+    assert result["learnerPurpose"] == purpose
+
+
+def test_plan_does_not_trust_unknown_learner_purpose():
+    result = _validate_plan({"actions": [], "confidence": 0.95,
+                             "teachingMove": "none", "learnerPurpose": "anything-goes"})
+    assert result["learnerPurpose"] is None
+
+
 def test_tutorial_guard_corrects_invented_keyboard_shortcuts_and_keeps_the_step():
     plan = {"actions": [{"name": "help.guide", "args": {}}], "reply": "Hold the space bar to speak and press the right arrow to move on.", "continuation": "await-response"}
     result = _guard_tutorial_controls(plan, {"tutorial": {"active": True}})

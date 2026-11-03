@@ -65,7 +65,8 @@ vi.mock('./learn/api', () => ({
       }
       if (text === 'fore') return { source: 'mock', actions: [], teachingMove: 'none', interpretedAnswer: { value: 4, confidence: 0.97, purpose: 'answer' }, reply: '' };
       if (text === 'ate') return { source: 'mock', actions: [], teachingMove: 'none', interpretedAnswer: { value: 8, confidence: 0.97, purpose: 'answer' }, reply: '' };
-      if (context?.verified_result?.verdict === 'invalid') return { source: 'mock', actions: [], teachingMove: 'hint', reply: `Count one for each friend. ${context.current_question}`, continuation: 'await-response' };
+      if (context?.verified_result?.action_type === 'operation') return { source: 'mock', actions: [], teachingMove: 'ask-check', reply: 'You have applied the same operation to both sides.', continuation: 'await-response' };
+      if (context?.verified_result?.verdict === 'invalid') return { source: 'mock', actions: [], teachingMove: 'ask-check', reply: `That step does not keep the same solution. ${context.current_question}`, continuation: 'await-response' };
       if (text === 'I want to study') return { source: 'mock', actions: [{ name: 'help.offerLessons', args: {} }], teachingMove: 'none', reply: '' };
       if (text === 'How does TieSua work?') return { source: 'mock', actions: [{ name: 'help.guide', args: {} }], teachingMove: 'none', reply: '' };
       if (text === 'Could you say that once more?') return { source: 'mock', actions: [{ name: 'speech.repeatCurrent', args: {} }], teachingMove: 'none', reply: '' };
@@ -97,7 +98,7 @@ vi.mock('./learn/api', () => ({
       if (text === 'What would happen if we went home?') return { source: 'mock', actions: [{ name: 'nav.goHome', args: {} }], teachingMove: 'none', reply: 'I can take you home.' };
       if (text === 'What if I switched to fractions later?') return { source: 'mock', actions: [{ name: 'lesson.openLesson', args: { query: 'fractions-parts' } }], teachingMove: 'none', reply: 'Opening fractions.' };
       if (text === 'Please do not take me home') return { source: 'mock', actions: [{ name: 'nav.goHome', args: {} }], teachingMove: 'none', reply: 'Going home.' };
-      if (text === 'Let us practise together') return { source: 'mock', actions: [{ name: 'lesson.morePractice', args: { mode: 'guided' } }], teachingMove: 'guided-example', reply: '' };
+      if (text === 'Let us practise together' || text === 'Can we practise a different example together?') return { source: 'mock', learnerPurpose: 'request', actions: [{ name: 'lesson.morePractice', args: { mode: 'guided' } }], teachingMove: 'guided-example', reply: '' };
       if (text === 'I need more time to think') return { source: 'mock', actions: [{ name: 'conversation.wait', args: {} }], teachingMove: 'none', reply: 'Take your time.', continuation: 'await-response' };
       if (text === 'Where are we?') return { source: 'mock', actions: [{ name: 'lesson.recap', args: {} }], teachingMove: 'none', reply: '', continuation: 'await-response' };
       if (text === 'I need help with multiplication') return { source: 'mock', actions: [], teachingMove: 'explain-prerequisite', reply: '', continuation: 'await-response' };
@@ -112,7 +113,7 @@ vi.mock('./learn/api', () => ({
       if (text === 'delayed response') return new Promise<any>(resolve => { calls.resolve = resolve; });
       if (text === 'I have finished the lesson.') return { source: 'mock', actions: [{ name: 'lesson.nextLesson', args: {} }], teachingMove: 'none', reply: 'Well done.', continuation: 'await-response' };
       if (text === 'multiply by four') return { source: 'mock', actions: [], teachingMove: 'none', reply: 'What equation do you get after multiplying both sides by four?', continuation: 'await-response' };
-      if (text === 'multiply by five') return { source: 'mock', actions: [], teachingMove: 'none', reply: 'What equation do you get after multiplying both sides by three?', continuation: 'await-response' };
+      if (text === 'multiply by five') return { source: 'mock', actions: [], teachingMove: 'none', reply: 'What equation do you get after doing that to both sides??', continuation: 'await-response' };
       if (text.startsWith('open ')) return { source: 'mock', actions: [{ name: 'lesson.openLesson', args: { query: text.slice(5) } }], teachingMove: 'none', reply: '' };
       return { source: 'mock', actions: [], teachingMove: 'none', reply: 'Let us begin. When you are ready, say continue.', continuation: 'await-response' };
     }),
@@ -383,8 +384,11 @@ describe('mounted app voice lifecycle', () => {
     await click('[aria-label="Start hands-free conversation"]'); await advance(2500);
     await answer('open Solving Equations with a Fraction'); await settle();
     await completeTeachingJourney();
-    await answer('the first one'); await settle();
+    await answer('Can we practise a different example together?'); await settle();
+    expect(document.body.textContent).toContain('together');
     await answer('multiply by five'); await settle();
+    expect(spoken.at(-1)?.text).toContain('What equation do you get after doing that to both sides?');
+    expect(spoken.at(-1)?.text).not.toContain('Would you like a hint');
     await answer(utterance); await settle();
     if (destination === 'lesson') {
       expect(spoken.at(-1)?.text).toContain('could not identify an available lesson');
@@ -1339,7 +1343,7 @@ describe('mounted app voice lifecycle', () => {
       expect(api.submitStep).toHaveBeenCalledTimes(1);
       expect(api.submitStep).toHaveBeenCalledWith(expect.any(String), 'multiply by five');
       expect(spoken.some(s => s.text.includes('valid operation'))).toBe(true);
-      expect(spoken.some(s => s.text.includes('What equation do you get after multiplying both sides by three'))).toBe(true);
+      expect(spoken.some(s => s.text.includes('What equation do you get after doing that to both sides?'))).toBe(true);
     expect(document.querySelector('.math-eq')?.textContent).toContain('\u00d7(5)=(4)\u00d7(5)');
     } else {
       await answer('three'); await settle();

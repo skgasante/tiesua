@@ -1064,7 +1064,9 @@ export function LessonRunner({ active = true, lessonId, player, settings, onSett
       return 'clarified';
     }
     // A question after a closing invitation does not authorize a new activity.
-    if (['choice', 'complete'].includes(stageRef.current) && isLearnerQuestion(text) && !valid.some(action => action.name.startsWith('speech.') || action.name.startsWith('display.') || action.name === 'conversation.wait')) {
+    const requestsPractice = result.learnerPurpose === 'request';
+    if (['choice', 'complete'].includes(stageRef.current) && isLearnerQuestion(text) && !requestsPractice
+        && !valid.some(action => action.name.startsWith('speech.') || action.name.startsWith('display.') || action.name === 'conversation.wait')) {
       await waitForSpeechEnd();
       if (!mounted.current || epoch !== turnEpoch.current) return 'handled';
       say(modelReply(result.reply || result.clarification || 'Of course. What would you like me to explain?'));
@@ -1163,6 +1165,20 @@ export function LessonRunner({ active = true, lessonId, player, settings, onSett
     // Gate before mutations. A rejected move must not run its companion
     // actions first and only then tell the learner it was refused.
     if (move !== 'none' && !gate.ok && !normalized.some(changesLearningState)) {
+      if (['guided', 'independent'].includes(stageRef.current) && extra.verified_result) {
+        // Refuse the state change, not the useful feedback. The verifier has
+        // already applied (or rejected) this step. A model's ask-check or
+        // continue label must not erase its explanation or strand practice.
+        const question = teachingFollowUp({ stage: stageRef.current,
+          pendingOperation: eqRef.current?.pending_operation,
+          currentQuestion: currentQuestionRef.current,
+          actionType: (extra.verified_result as { action_type?: string }).action_type });
+        const feedback = result.reply?.trim();
+        say(modelReply(feedback
+          ? feedback + (!feedback.includes('?') && question ? ` ${question}` : '')
+          : question || 'What step would you try next?'));
+        return 'handled';
+      }
       say('Let us stay with the current question. Would you like a hint, or to hear it again?');
       return 'clarified';
     }

@@ -73,7 +73,7 @@ export const api = {
   /** Central orchestrator: ONE decision per meaningful turn —
    * validated registry actions + a teaching move + a short reply. */
   orchestrate: (text: string, context: Record<string, unknown>) =>
-    request<{ diagnostics?: { note?: string }; stepAssessment?: 'correct' | 'incorrect' | 'partial' | 'unanswered' | null; interpretedAnswer?: { value: number; confidence: number; purpose: 'answer' } | null; source: string; model?: string | null; actions: { name: string; args?: Record<string, unknown>; scope?: string }[]; teachingMove?: string; reply?: string; continuation?: 'await-response' | 'teach-next' | 'close'; clarification?: string | null }>(
+    request<{ diagnostics?: { note?: string }; learnerPurpose?: 'stop' | 'request' | 'answer' | 'question' | 'unclear' | null; stepAssessment?: 'correct' | 'incorrect' | 'partial' | 'unanswered' | null; interpretedAnswer?: { value: number; confidence: number; purpose: 'answer' } | null; source: string; model?: string | null; actions: { name: string; args?: Record<string, unknown>; scope?: string }[]; teachingMove?: string; reply?: string; continuation?: 'await-response' | 'teach-next' | 'close'; clarification?: string | null }>(
       '/v1/orchestrate', { method: 'POST', body: JSON.stringify({ text, context: { ...context, learner_purpose: isLearnerQuestion(text) ? "question-or-help" : "statement-or-request" } }) }),
   /** Conceptual questions for lessons without an equation session,
    * answered by Meta strictly from the lesson's checked explanation. */
