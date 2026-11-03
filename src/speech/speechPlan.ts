@@ -48,8 +48,8 @@ export interface SpeechPlan {
  * fixed pauses alone never guarantee understandable grouping. */
 export const PAUSES: Record<SpeechMode, Record<'phrase' | 'group' | 'equation', number>> = {
   ordinary: { phrase: 0, group: 0, equation: 0 },
-  natural: { phrase: 0, group: 180, equation: 220 },
-  detailed: { phrase: 140, group: 400, equation: 500 },
+  natural: { phrase: 0, group: 450, equation: 350 },
+  detailed: { phrase: 140, group: 900, equation: 750 },
 };
 export function pauseFor(mode: SpeechMode, kind: 'phrase' | 'group' | 'equation'): number {
   return PAUSES[mode][kind];
@@ -196,7 +196,7 @@ function speakBinary(node: Extract<MathNode, { kind: 'binary' }>, mode: SpeechMo
   // boundary, not a comma whose timing depends entirely on the voice.
   const term = unwrap(right);
   const separateFraction = mode === 'natural' && term.kind === 'binary' && term.op === '/';
-  return [...withPause(speakTerm(left), separateFraction ? 300 : pause, separateFraction ? 'group' : 'phrase'), seg(node.id, word), ...speakTerm(right)];
+  return [...withPause(speakTerm(left), separateFraction ? 600 : pause, separateFraction ? 'group' : 'phrase'), seg(node.id, word), ...speakTerm(right)];
 }
 
 export function toSpeechPlan(node: MathNode, mode: SpeechMode): SpeechPlan {
