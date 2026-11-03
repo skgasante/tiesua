@@ -58,10 +58,17 @@ const textPlan = (text: string): SpeechPlan => ({ mode: 'natural', segments: [{ 
 type View = 'home' | 'lessons' | 'lesson' | 'explore' | 'settings' | 'sound-settings' | 'interaction-settings' | 'voice-compare' | 'interruption-lab';
 const SETTINGS_KEY = 'tiesua-settings';
 
-const DEFAULTS: SpeechSettings = { rate: 1.15, pauseScale: 1, volume: 1, textSize: 100, voiceURI: '', announceMode: 'app-voice', talkShortcut: 'none' };
+const RATE_DEFAULT_VERSION = '1';
+const DEFAULTS: SpeechSettings = { rate: 0.8, pauseScale: 1, volume: 1, textSize: 100, voiceURI: '', announceMode: 'app-voice', talkShortcut: 'none' };
 
 function loadSettings(): SpeechSettings {
-  try { return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Partial<SpeechSettings>) }; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Partial<SpeechSettings>;
+    // Apply the slower baseline once to returning learners as well. Later
+    // learner-selected speeds remain their choice across reloads.
+    if (localStorage.getItem('tiesua-rate-default-version') !== RATE_DEFAULT_VERSION) saved.rate = DEFAULTS.rate;
+    return { ...DEFAULTS, ...saved };
+  }
   catch { return DEFAULTS; }
 }
 
@@ -110,7 +117,10 @@ export default function App() {
     try { const n = Number(localStorage.getItem('tiesua-listening-quiet-seconds')); return [2, 3, 5, 8].includes(n) ? n : 2; } catch { return 2; }
   });
 
-  useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }, [settings]);
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem('tiesua-rate-default-version', RATE_DEFAULT_VERSION);
+  }, [settings]);
   useEffect(() => { document.documentElement.style.fontSize = `${(16 * settings.textSize) / 100}px`; }, [settings.textSize]);
   useEffect(() => {
     const refresh = () => setVoices(player.provider.voices());

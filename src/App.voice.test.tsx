@@ -184,6 +184,25 @@ const completeTeachingJourney = async () => {
 };
 
 describe('mounted app voice lifecycle', () => {
+  it.each([
+    { saved: null, migrated: false, expected: 0.8 },
+    { saved: 1.15, migrated: false, expected: 0.8 },
+    { saved: 0.95, migrated: true, expected: 0.95 },
+  ])('uses the slower baseline and preserves later speed choices: $saved / $migrated', async ({ saved, migrated, expected }) => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    localStorage.clear(); sessionStorage.clear();
+    if (saved !== null) localStorage.setItem('tiesua-settings', JSON.stringify({ rate: saved, volume: 0.7 }));
+    if (migrated) localStorage.setItem('tiesua-rate-default-version', '1');
+    const container = document.createElement('div'); document.body.appendChild(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<App />));
+      const settings = JSON.parse(localStorage.getItem('tiesua-settings')!);
+      expect(settings.rate).toBe(expected);
+      if (saved !== null) expect(settings.volume).toBe(0.7);
+      expect(localStorage.getItem('tiesua-rate-default-version')).toBe('1');
+    } finally { await act(async () => root.unmount()); }
+  });
   let server: ChildProcess;
   beforeAll(async () => {
     const socket = createServer();
