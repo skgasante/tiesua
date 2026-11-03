@@ -1,5 +1,5 @@
 import type { SpeechPlan } from './speechPlan';
-import { renderLegacyUtterances, renderUtterances } from './render';
+import { applyPauseScale, renderLegacyUtterances, renderUtterances } from './render';
 import { logLifecycle } from './lifecycleLog';
 import { preferredVoice } from './preferredVoice';
 
@@ -60,7 +60,7 @@ export class BrowserSpeechProvider implements SpeechProvider {
     const pauseScale = opts.pauseScale ?? 1;
     // Phrase-level rendering by default: far fewer synthesis
     // restarts, connected phrases, silence only at real boundaries.
-    const segments = opts.legacy ? renderLegacyUtterances(plan) : renderUtterances(plan);
+    const segments = applyPauseScale(opts.legacy ? renderLegacyUtterances(plan) : renderUtterances(plan), pauseScale);
     let index = 0;
     let doneFired = false;
     const fireDone = (): void => {
@@ -125,7 +125,7 @@ export class BrowserSpeechProvider implements SpeechProvider {
         window.clearTimeout(watchdog);
         if (kind === 'end') logLifecycle('speech.segment-end', `segment ${index}`);
         index++;
-        const pause = segment.pauseAfterMs * pauseScale;
+        const pause = segment.pauseAfterMs;
         if (index < segments.length && pause > 0) {
           this.timer = window.setTimeout(speakNext, pause);
         } else {
