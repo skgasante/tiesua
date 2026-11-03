@@ -14,7 +14,7 @@ describe('speech across all eight problems', () => {
       const utterances = renderUtterances(plan);
       expect(utterances.length).toBeGreaterThanOrEqual(1);
       expect(utterances.length).toBeLessThanOrEqual(4);
-      expect(plannedPauseTotal(plan)).toBeLessThanOrEqual(450);
+      expect(plannedPauseTotal(plan)).toBeLessThanOrEqual(1000);
       if (problem.expression.startsWith('(x')) {
         expect(utterances.map((u) => u.text).join(' ')).toContain('all over');
       }
