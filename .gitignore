@@ -20,3 +20,7 @@ build-results.txt
 
 # Vercel account links and downloaded environments stay local.
 .vercel/
+
+# Private planning, presentation, acceptance records and design notes.
+/docs/
+/design-qa.md
