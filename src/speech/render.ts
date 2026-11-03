@@ -29,7 +29,7 @@ export function renderUtterances(plan: SpeechPlan): RenderedUtterance[] {
     const fractionTerm = plan.mode === 'natural' ? /\bx,\s+(?=(?:plus|minus)\s+[a-z0-9]+\s+over\s+[a-z0-9]+\b)/i.exec(text) : null;
     if (fractionTerm) {
       const split = fractionTerm.index + 1;
-      utterances.push({ text: text.slice(0, split), pauseAfterMs: 300, pitch: 1 });
+      utterances.push({ text: text.slice(0, split), pauseAfterMs: 600, pitch: 1 });
       utterances.push({ text: text.slice(split + 1).trim(), pauseAfterMs, pitch: emphasis ? 1.12 : 1 });
     } else utterances.push({ text, pauseAfterMs, pitch: emphasis ? 1.12 : 1 });
     texts = [];
