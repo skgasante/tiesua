@@ -62,3 +62,30 @@ export function renderLegacyUtterances(plan: SpeechPlan): RenderedUtterance[] {
 export function plannedPauseTotal(plan: SpeechPlan): number {
   return plan.segments.reduce((sum, s) => sum + s.pauseAfterMs, 0);
 }
+
+
+/**
+ * Apply the learner's chosen pause multiplier to every inserted gap.
+ *
+ * At zero, join the phrases into one browser utterance. Otherwise browsers
+ * still add a gap each time one utterance ends and another begins, even if
+ * our own timeout was zero. This avoids that preventable gap.
+ *
+ * A browser voice can still introduce natural timing within an utterance;
+ * Web Speech does not expose exact control over its internal prosody.
+ */
+export function applyPauseScale(utterances: RenderedUtterance[], pauseScale: number): RenderedUtterance[] {
+  const scale = Number.isFinite(pauseScale) ? Math.max(0, pauseScale) : 1;
+  if (scale === 0) {
+    if (utterances.length === 0) return [];
+    return [{
+      text: utterances.map((utterance) => utterance.text.trim()).join(' ').replace(/\s+/g, ' ').trim(),
+      pauseAfterMs: 0,
+      pitch: 1,
+    }];
+  }
+  return utterances.map((utterance) => ({
+    ...utterance,
+    pauseAfterMs: Math.round(utterance.pauseAfterMs * scale),
+  }));
+}
