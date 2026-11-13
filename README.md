@@ -63,3 +63,7 @@ TieSua begins with mathematics, with the longer-term aim of making more learning
 ---
 
 *Created by Shadrach Asante · Ghana · 2026*
+
+## Project documentation
+
+See the [project handbook](docs/README.md) for the development history, decisions, current status and verification guides.

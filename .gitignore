@@ -22,5 +22,23 @@ build-results.txt
 .vercel/
 
 # Private planning, presentation, acceptance records and design notes.
-/docs/
+/docs/*
+!/docs/README.md
+!/docs/PROJECT_HISTORY.md
+!/docs/ARCHITECTURE.md
+!/docs/VOICE_SYSTEM.md
+!/docs/MATHEMATICS_ENGINE.md
+!/docs/ACCESSIBILITY.md
+!/docs/RESEARCH_NOTES.md
+!/docs/IDEAS_BACKLOG.md
+!/docs/KNOWN_ISSUES.md
+!/docs/STATUS.md
+!/docs/EXPERIMENTS.md
+!/docs/DECISIONS/
+/docs/DECISIONS/*
+!/docs/DECISIONS/README.md
+!/docs/DECISIONS/001-voice-and-verification.md
+!/docs/DECISIONS/002-muse-spark.md
+!/docs/DECISIONS/003-interruption-pilot.md
+!/docs/DECISIONS/004-shared-deployment-state.md
 /design-qa.md
